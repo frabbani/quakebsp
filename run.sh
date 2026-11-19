@@ -10,6 +10,6 @@ if ! g++ -std=c++17 main.cpp vector.cpp lodepng.c ; then
 fi
 echo "done! running..."
 echo "********************"
-./a.exe
+./a.exe e1m1
 echo "********************"
 echo "finished!"

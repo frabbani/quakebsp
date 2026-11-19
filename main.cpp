@@ -56,33 +56,51 @@ struct FileData {
     }
     std::fclose(file);
   }
+
+  void write(std::string_view filename) const {
+    FILE* file = std::fopen(filename.data(), "wb");
+    if (!file) {
+      std::fprintf(stderr, "Failed to open file '%s' for writing\n",
+                   filename.data());
+      std::perror("Failed to open file for writing");
+      std::exit(EXIT_FAILURE);
+    }
+    if (std::fwrite(data.data(), 1, data.size(), file) != data.size()) {
+      std::fprintf(stderr, "Failed to write file '%s'\n", filename.data());
+      std::perror("Failed to write file");
+      std::exit(EXIT_FAILURE);
+    }
+    std::fclose(file);
+  }
 };
 
-void fileWrite(std::string_view filename, std::string_view str) {
-  FILE* file = std::fopen(filename.data(), "w");
+void fileWrite(std::string_view filename, std::string_view content) {
+  FILE* file = std::fopen(filename.data(), "wb");
   if (!file) {
+    std::fprintf(stderr, "Failed to open file '%s' for writing\n",
+                 filename.data());
     std::perror("Failed to open file for writing");
     std::exit(EXIT_FAILURE);
   }
-  if (std::fprintf(file, "%s", str.data()) < 0) {
-    std::perror("Failed to write file");
-    std::exit(EXIT_FAILURE);
+  if (!content.empty()) {
+    std::fwrite(content.data(), 1, content.size(), file);
   }
   std::fclose(file);
 }
 
-void exportStr(std::string_view filename, std::string_view content) {
-  FILE* file = std::fopen(filename.data(), "w");
-  if (!file) {
-    std::perror("Failed to open file for writing");
-    std::exit(EXIT_FAILURE);
-  }
-  if (std::fwrite(content.data(), 1, content.size(), file) != content.size()) {
-    std::perror("Failed to write file");
-    std::exit(EXIT_FAILURE);
-  }
-  std::fclose(file);
-}
+// void exportStr(std::string_view filename, std::string_view content) {
+//   FILE* file = std::fopen(filename.data(), "w");
+//   if (!file) {
+//     std::perror("Failed to open file for writing");
+//     std::exit(EXIT_FAILURE);
+//   }
+//   if (std::fwrite(content.data(), 1, content.size(), file) != content.size())
+//   {
+//     std::perror("Failed to write file");
+//     std::exit(EXIT_FAILURE);
+//   }
+//   std::fclose(file);
+// }
 
 namespace bsp {
 #pragma pack(push, 1)
@@ -334,9 +352,9 @@ std::string exportOBJ(std::string_view objName,
 
 int main(int argc, char* argv[]) {
   printf("Hello, World!\n");
-
-  std::string mapName("2fort5r");
+  std::string mapName(argc > 1 ? argv[1] : "2fort5r");
   FileData bspFile("assets/" + mapName + ".bsp");
+  printf("Loading map: %s\n", mapName.c_str());
 
   bsp::initPalette();
   Uint64 offset = reinterpret_cast<Uint64>(bspFile.data.data());
@@ -417,7 +435,7 @@ int main(int argc, char* argv[]) {
           {static_cast<float>(tex.w), static_cast<float>(tex.h)});
     }
   }
-  exportStr("export/" + mapName + ".mtl", ss.str());
+  fileWrite("export/" + mapName + ".mtl", ss.str());
 
   uint numFaces = header->faces.size / sizeof(bsp::Face);
   uint numModels = header->models.size / sizeof(bsp::Model);
@@ -457,9 +475,9 @@ int main(int argc, char* argv[]) {
     }
     auto obj = obj::exportOBJ(mapName, facesData, matNames);
     if (0 == i) {
-      exportStr("export/" + mapName + ".obj", obj);
+      fileWrite("export/" + mapName + ".obj", obj);
     } else {
-      exportStr("export/" + mapName + "_" + std::to_string(i) + ".obj", obj);
+      fileWrite("export/" + mapName + "_" + std::to_string(i) + ".obj", obj);
     }
   }
 
